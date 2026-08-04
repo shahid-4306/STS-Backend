@@ -2,7 +2,12 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
-export const UPLOADS_ROOT = path.resolve(__dirname, "../../uploads");
+// Use /tmp for serverless environments (like Vercel), fallback to relative path locally
+export const UPLOADS_ROOT =
+  process.env.VERCEL || process.env.NODE_ENV === "production"
+    ? path.join("/tmp", "uploads")
+    : path.resolve(__dirname, "../../uploads");
+
 export const INVOICES_DIR = path.join(UPLOADS_ROOT, "invoices");
 
 const ALLOWED_MIME_TYPES: Record<string, string> = {
@@ -14,8 +19,12 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB safety ceiling per invoice snapshot
 
 export function ensureUploadDirs(): void {
-  if (!fs.existsSync(INVOICES_DIR)) {
-    fs.mkdirSync(INVOICES_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(INVOICES_DIR)) {
+      fs.mkdirSync(INVOICES_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.warn("[fileStorage] Could not create upload directory:", err);
   }
 }
 
@@ -29,13 +38,19 @@ export class InvalidImagePayloadError extends Error {
 
 /**
  * Validates and decodes a base64 data URI (e.g. "data:image/png;base64,....."),
- * writes it to backend/uploads/invoices/, and returns everything needed to
+ * writes it to backend/uploads/invoices/ (or /tmp/uploads on Vercel), and returns everything needed to
  * persist a reference to it.
  */
 export function saveBase64Image(
   imageBase64: string,
-  billId: string
-): { storedFileName: string; relativePath: string; url: string; contentType: string; sizeBytes: number } {
+  billId: string,
+): {
+  storedFileName: string;
+  relativePath: string;
+  url: string;
+  contentType: string;
+  sizeBytes: number;
+} {
   if (typeof imageBase64 !== "string" || !imageBase64.trim()) {
     throw new InvalidImagePayloadError("imageBase64 is required.");
   }
@@ -43,7 +58,7 @@ export function saveBase64Image(
   const match = imageBase64.match(/^data:(image\/(?:png|jpe?g));base64,(.+)$/);
   if (!match) {
     throw new InvalidImagePayloadError(
-      "imageBase64 must be a valid PNG or JPEG data URI (e.g. 'data:image/png;base64,...')."
+      "imageBase64 must be a valid PNG or JPEG data URI (e.g. 'data:image/png;base64,...').",
     );
   }
 
@@ -51,14 +66,18 @@ export function saveBase64Image(
   const base64Data = match[2];
   const extension = ALLOWED_MIME_TYPES[contentType];
   if (!extension) {
-    throw new InvalidImagePayloadError(`Unsupported image type: ${contentType}`);
+    throw new InvalidImagePayloadError(
+      `Unsupported image type: ${contentType}`,
+    );
   }
 
   let buffer: Buffer;
   try {
     buffer = Buffer.from(base64Data, "base64");
   } catch {
-    throw new InvalidImagePayloadError("imageBase64 could not be decoded — the data appears corrupted.");
+    throw new InvalidImagePayloadError(
+      "imageBase64 could not be decoded — the data appears corrupted.",
+    );
   }
 
   if (!buffer.length) {
@@ -66,7 +85,7 @@ export function saveBase64Image(
   }
   if (buffer.length > MAX_IMAGE_BYTES) {
     throw new InvalidImagePayloadError(
-      `Image is too large (${(buffer.length / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 8MB.`
+      `Image is too large (${(buffer.length / (1024 * 1024)).toFixed(1)}MB). Maximum allowed is 8MB.`,
     );
   }
 
@@ -80,7 +99,9 @@ export function saveBase64Image(
   try {
     fs.writeFileSync(absolutePath, buffer);
   } catch (err) {
-    throw new Error(`Failed to write invoice image to disk: ${(err as Error).message}`);
+    throw new Error(
+      `Failed to write invoice image to disk: ${(err as Error).message}`,
+    );
   }
 
   return {
@@ -100,6 +121,10 @@ export function deleteStoredImage(storedFileName: string): void {
       fs.unlinkSync(absolutePath);
     }
   } catch (err) {
-    console.error("[fileStorage] Failed to delete stored image:", storedFileName, err);
+    console.error(
+      "[fileStorage] Failed to delete stored image:",
+      storedFileName,
+      err,
+    );
   }
 }

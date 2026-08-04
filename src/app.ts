@@ -18,7 +18,14 @@ import dashboardRoutes from "./routes/dashboard.routes";
 import reportRoutes from "./routes/report.routes";
 import searchRoutes from "./routes/search.routes";
 
-ensureUploadDirs();
+// Safely wrap directory creation so Vercel serverless read-only filesystem doesn't crash app
+try {
+  ensureUploadDirs();
+} catch (err) {
+  console.warn(
+    "[serverless] Skipping local upload dir creation on read-only filesystem.",
+  );
+}
 
 const app: Application = express();
 
