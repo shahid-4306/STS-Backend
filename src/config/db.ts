@@ -1,19 +1,22 @@
 import mongoose from "mongoose";
 import { env } from "./env";
 
-// Cached connection interface for Serverless environments
 let isConnected = false;
 
 export async function connectDB(): Promise<void> {
+  // Reuse existing connection across Vercel serverless invocations
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
 
   try {
     mongoose.set("strictQuery", true);
+
     const db = await mongoose.connect(env.MONGO_URI, {
-      bufferCommands: false, // Prevents queries from buffering infinitely if connection drops
+      bufferCommands: false, // Prevents queries from buffering infinitely if offline
       serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      family: 4, // Force IPv4 DNS resolution on Vercel Node runtime
     });
 
     isConnected = db.connections[0].readyState === 1;
