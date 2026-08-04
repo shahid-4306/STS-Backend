@@ -1,6 +1,3 @@
-import dns from "dns";
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
 import app from "./app";
 import { env } from "./config/env";
 import { connectDB } from "./config/db";
@@ -18,7 +15,12 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch((err) => {
-  console.error("[server] Failed to start:", err);
-  process.exit(1);
-});
+// Only start the server directly if this file is executed directly (e.g. node dist/server.js)
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    console.error("[server] Failed to start:", err);
+    process.exit(1);
+  });
+}
+
+export { bootstrap };
