@@ -22,19 +22,39 @@ ensureUploadDirs();
 
 const app: Application = express();
 
-app.use(
-  cors({
-    origin: env.CORS_ORIGIN,
-    credentials: true,
-  }),
-);
+// Enable CORS Pre-Flight across all routes
+const corsOptions = {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // Check if origin matches allowed origins or allow vercel previews
+    if (
+      env.CORS_ORIGIN.includes("*") ||
+      env.CORS_ORIGIN.includes(origin) ||
+      origin.endsWith(".vercel.app")
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error("CORS policy error: Origin not allowed."));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Enable preflight handling for all routes
+
 app.use(express.json({ limit: "12mb" }));
 app.use(express.urlencoded({ extended: true }));
 if (env.NODE_ENV !== "test") {
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 }
 
-// Serves saved invoice image snapshots, e.g. GET /uploads/invoices/invoice-<id>-<ts>.png
 app.use("/uploads", express.static(UPLOADS_ROOT));
 
 app.get("/api/health", (req, res) => {
