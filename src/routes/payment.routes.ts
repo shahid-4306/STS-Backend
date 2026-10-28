@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { listPayments, collectPayment, customerPaymentHistory } from "../controllers/payment.controller";
+import { requireAuth } from "../middleware/auth.middleware";
+
+const router = Router();
+router.use(requireAuth);
+
+router.get("/", listPayments);
+router.get("/customer/:customerId/history", customerPaymentHistory);
+router.post("/collect", collectPayment);
+
+export default router;
