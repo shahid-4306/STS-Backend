@@ -9,7 +9,10 @@ import Notification from "../models/Notification";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ok, created, fail } from "../utils/apiResponse";
 import { AuthRequest } from "../types";
-import { customerArrearsBalance, consumeArrearsForCustomer } from "./arrears.controller";
+import {
+  customerArrearsBalance,
+  consumeArrearsForCustomer,
+} from "./arrears.controller";
 
 /** Marker the auto-created "paid at bill creation" Payment has always carried. */
 export const BILL_PAYMENT_REMARK = "Payment at bill creation";
@@ -38,7 +41,10 @@ export async function customerOutstanding(
     Bill.find(filter).select("remainingBalance"),
     customerArrearsBalance(customerId),
   ]);
-  const billBalance = bills.reduce((s, b) => s + Number(b.remainingBalance || 0), 0);
+  const billBalance = bills.reduce(
+    (s, b) => s + Number(b.remainingBalance || 0),
+    0,
+  );
   return billBalance + manualArrears;
 }
 
@@ -159,7 +165,9 @@ function resolveBillGroups(groups: any): ResolvedGroup[] {
     }
     seen.add(groupId);
     if (!personName) {
-      throw httpError("Please enter a person name for every group (or remove the empty group).");
+      throw httpError(
+        "Please enter a person name for every group (or remove the empty group).",
+      );
     }
     if (personName.length > 100) {
       throw httpError("A person name can be at most 100 characters.");
@@ -195,7 +203,9 @@ async function resolveBillItems(
     }
     const groupId = raw.groupId ? String(raw.groupId).trim() : "";
     if (groupId && !groupIds.has(groupId)) {
-      throw httpError("An item references a person group that does not exist on this bill.");
+      throw httpError(
+        "An item references a person group that does not exist on this bill.",
+      );
     }
     const product = await Product.findById(raw.productId);
     if (!product) {
@@ -249,7 +259,10 @@ function readBillDate(value: any, fallback: Date): Date {
  * `newBillId`. Their balances are already inside that bill's previousArrears,
  * so from now on only the newer bill represents what the customer owes.
  */
-async function absorbOpenBills(customerId: string, newBillId: mongoose.Types.ObjectId) {
+async function absorbOpenBills(
+  customerId: string,
+  newBillId: mongoose.Types.ObjectId,
+) {
   await Bill.updateMany(
     {
       customerId,
@@ -361,7 +374,8 @@ export const createBill = asyncHandler(
       remarks,
     } = req.body;
     const clientRequestId =
-      typeof req.body.clientRequestId === "string" && req.body.clientRequestId.trim()
+      typeof req.body.clientRequestId === "string" &&
+      req.body.clientRequestId.trim()
         ? req.body.clientRequestId.trim().slice(0, 100)
         : undefined;
 
@@ -384,7 +398,10 @@ export const createBill = asyncHandler(
     let resolvedItems: ResolvedItem[];
     let resolvedGroups: ResolvedGroup[];
     let subtotal: number;
-    let discountVal: number, deliveryVal: number, rentVal: number, extraVal: number;
+    let discountVal: number,
+      deliveryVal: number,
+      rentVal: number,
+      extraVal: number;
     let receivedVal: number, billDate: Date;
     try {
       resolvedGroups = resolveBillGroups(groups);
@@ -411,15 +428,26 @@ export const createBill = asyncHandler(
       Math.min(Number(requestedAdvanceUsed) || 0, availableAdvance),
     );
 
+    // const grandTotal =
+    //   subtotal -
+    //   discountVal +
+    //   deliveryVal +
+    //   rentVal +
+    //   extraVal +
+    //   previousArrears -
+    //   advanceUsed;
+    // const remainingBalance = grandTotal - receivedVal;
     const grandTotal =
       subtotal -
       discountVal +
-      deliveryVal +
+      deliveryVal -
       rentVal +
       extraVal +
       previousArrears -
       advanceUsed;
     const remainingBalance = grandTotal - receivedVal;
+
+    // bill.biltiNumber = biltiNumber ?? bill.biltiNumber;
 
     let bill;
     try {
@@ -555,7 +583,10 @@ export const updateBill = asyncHandler(
     let resolvedItems: ResolvedItem[];
     let resolvedGroups: ResolvedGroup[];
     let subtotal: number;
-    let discountVal: number, deliveryVal: number, rentVal: number, extraVal: number;
+    let discountVal: number,
+      deliveryVal: number,
+      rentVal: number,
+      extraVal: number;
     let receivedVal: number, billDate: Date;
     try {
       resolvedGroups = resolveBillGroups(groups);
