@@ -81,6 +81,7 @@ export interface IBill extends Document {
   extraCharges: number;
   previousArrears: number;
   advanceUsed: number;
+  advanceCredit: number;
   grandTotal: number;
   receivedAmount: number;
   remainingBalance: number;
@@ -150,6 +151,11 @@ export interface IInvoiceImage extends Document {
   createdAt: Date;
 }
 
+export interface IMonthlyRecord extends Document {
+  customerId: Types.ObjectId;
+  monthKey: string; // YYYY-MM
+  createdAt: Date;
+}
 /* ============================================================
    NOTIFICATION
    ============================================================ */

@@ -58,6 +58,7 @@ const BillSchema = new Schema<IBill>(
     remainingBalance: { type: Number, default: 0 },
     paymentMethod: { type: String, default: "Bank Transfer" },
     remarks: { type: String, default: "" },
+    advanceCredit: { type: Number, default: 0 },
     // Old records have no value here, which Mongoose reads back as null — i.e.
     // "not carried forward", exactly how they behaved before this field existed.
     absorbedIntoBillId: {
