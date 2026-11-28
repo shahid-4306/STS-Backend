@@ -7,6 +7,8 @@ import { Document, Types } from "mongoose";
 export interface IAdmin extends Document {
   email: string;
   passwordHash: string;
+  /** Tokens issued before this moment are rejected (set when the password changes). Optional. */
+  tokenValidAfter?: Date;
   createdAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
 }
